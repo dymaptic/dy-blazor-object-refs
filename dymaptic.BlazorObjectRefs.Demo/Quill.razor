@@ -1,0 +1,53 @@
+﻿@* JsRuntime manages calls to JavaScript *@
+@inject IJSRuntime JsRuntime
+
+<div id="quill-container"></div>
+
+@code {
+    [Parameter]
+    public string? Theme { get; set; }
+    
+    [Parameter]
+    public string? Placeholder { get; set; }
+    
+    [Parameter]
+    public EventCallback<object> TextChanged { get; set; }
+
+    [JSInvokable]
+    public async Task JsTextChanged(object delta)
+    {
+        await TextChanged.InvokeAsync(delta);
+    }
+    
+    public async Task<string> GetText()
+    {
+        return await _quill!.InvokeAsync<string>("getText");
+    }
+
+    public async Task Enable(bool enabled)
+    {
+        await _quill!.InvokeVoidAsync("enable", enabled);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            IJSObjectReference module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./jsInterop.js");
+            Dictionary<string, object?> options = new();
+            if (Theme is not null)
+            {
+                options["theme"] = Theme;
+            }
+            if (Placeholder is not null)
+            {
+                options["placeholder"] = Placeholder;
+            }
+            _quill = await module.InvokeAsync<IJSObjectReference>("getQuill", "quill-container", 
+                DotNetReference, options);
+        }
+    }
+
+    private IJSObjectReference? _quill;
+    private DotNetObjectReference<Quill> DotNetReference => DotNetObjectReference.Create(this);
+}

@@ -1,0 +1,57 @@
+﻿@page "/"
+@using System.Text.Json
+
+<PageTitle>Index</PageTitle>
+
+<h1>Quill Editor</h1>
+<button @onclick="ToggleQuill">@(_isEnabled ? "Disable Editor" : "Enable Editor")</button>
+
+<Quill @ref="_quill" 
+       Theme="snow" 
+       Placeholder="Write a blog post..." 
+       TextChanged="OnTextChanged" />
+
+<h2>Delta Content</h2>
+
+<div style="max-height: 400px; overflow-y: scroll">
+    @((MarkupString)_deltaJson)
+</div>
+
+<button @onclick="GetText">Get Text</button>
+@if (!string.IsNullOrWhiteSpace(_textContent))
+{
+    <h2>Raw Content</h2>
+    <div>@_textContent</div>
+}
+
+@code
+{
+    private Quill _quill = default!;
+
+    private async Task OnTextChanged(object delta)
+    {
+        _deltaJson = JsonSerializer.Serialize(delta, _jsonOptions)
+            .Replace(Environment.NewLine, "<br>")
+            .Replace(" ", "&nbsp;&nbsp;");
+    }
+
+    private async Task GetText()
+    {
+        _textContent = await _quill.GetText();
+    }
+
+    private async Task ToggleQuill()
+    {
+        _isEnabled = !_isEnabled;
+        await _quill.Enable(_isEnabled);
+    }
+ 
+    private string _deltaJson = string.Empty;
+    private string _textContent = string.Empty;
+    private bool _isEnabled = true;
+
+    private readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        WriteIndented = true
+    };
+}
